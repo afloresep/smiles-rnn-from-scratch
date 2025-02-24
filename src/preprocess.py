@@ -1,26 +1,38 @@
 import rdkit
 import numpy as np 
+from typing import List, Union, Optional
 
 class Preprocessor: 
-    def __init__(self, filepath):
-        self.file_path = filepath
-
-    def load_data(self, filepath): 
+    def load_data(self, filepath:str ) -> List: 
         """ 
         Function to read SMILES strings from a file
         Args: 
         - file_path: path to input file
+        Returns: 
+        - smiles_list (list)
         """
-        pass
-
-    def clean_smiles(self, smiles): 
+        try: 
+            with open(filepath, 'r') as file:
+                smiles_list = file.read().split()
+        except:
+            raise Exception(f"Failed loading file, raised excepcion: {Exception}")
+        return smiles_list 
+    
+    def clean_smiles(self, smiles) -> List: 
         """
         Use RDKit for canonicalization and cleaning of SMILES
         
         Args:
-        - smiles
+        - smiles: str or list of smiles strings
         """
-        pass
+
+        if isinstance(smiles, str): 
+            pass
+        elif isinstance(smiles, list): 
+            for smile in smiles: 
+                pass
+        else:
+            raise TypeError(f"Only str and List are accepted, instead got: {type(smiles)}")
 
     def filter_smiles(self, smiles_list): 
         """
@@ -38,7 +50,7 @@ class Preprocessor:
 
 class Tokenizer:
     def __init__(self):
-        pass
+        self.preprocessor = Preprocessor()
 
     def __format__(self, format_spec):
         pass
@@ -50,40 +62,89 @@ class Tokenizer:
         Args:
         - smiles_list
         """
-        pass
+        # First build the vocabulary from the dataset
+        vocab = set()
+        for smiles in smiles_list:
+            try:
+                tokens = self.tokenize(smiles)
+                vocab.update(tokens)
+            except Exception as e:
+                print(f"Problem with smiles {smiles}", e)
+
+        # Encode vocabulary from str to index
+        return vocab 
     
-    def tokenize(self, smiles): 
+    def tokenize(self, smiles:str, multi_char_tokens:Optional[List[str]]=None) -> List[str]: 
         """
-        Convert a SMILES string into a list of tokens of integer indice
+        Tokenizes a single SMILES string into a list of tokens,
+        preserving multi-character atoms and stereochemistry tokens.
         
         Args:
-        - smiles
+        - smiles(str): A raw SMILES string (e.g., "C@@H")
+        - multi_char_tokens(Optional[List[str]]): A list of strings containing multi character
+        tokens e.g. "Cl", "Br", "Si"
+        
+        Returns:
+        - tokens (List[str]): List of tokens representing the SMILES.
+        e.g., ["C", "@@", "H"]
         """
-        pass
+        tokens = []
+
+        i = 0
+
+        # Default multi_car_tokens set 
+        if multi_char_tokens is None:
+            multi_char_tokens = {"Cl", "Br", "Si", "Li", "Na", "Al", "Se", "@@"}  
+        while i < len(smiles):
+            if i < (len(smiles) - 1) and smiles[i:i+2] in multi_char_tokens:
+                tokens.append(smiles[i:i+2])
+                i += 2
+            else: 
+                if smiles[i:i+1] not in tokens:
+                    tokens.append(smiles[i:i+1])
+                i += 1
+
+        return tokens
+ 
 
     def detokenize(self, token_list): 
         """
         Convert list of token back into a SMILES string
+
+        Args: 
+        - token_list
         """
         pass
 
     def save_vocab(self, filepath): 
         """
         Save generated vocabulary
+
+        Args:
+        - filepath
         """
         pass
 
     def load_vocab(self, filepath): 
         """
         Load a previously saved vocabulary 
+
+        Args:
+        - filepath: Path to vocabulary to be loaded 
         """
-        pass
+        vocab = self.preprocessor.load_data(filepath=filepath)
+
+        return vocab
+
+         
 
 def main(): 
     """
     Preprocessing pipeline
     """
-    pass
+    
+    preprocess =  Preprocessor()
+    smiles_list = preprocess.load_data("../data/smiles.txt") 
 
 
 if __name__=="__main__":
