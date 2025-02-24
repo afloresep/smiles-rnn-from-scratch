@@ -18,6 +18,8 @@ def _string_to_list_chars(string:str) -> List[str]:
     """
     str_token = [string[i:i+1] for i in range(len(string))]
 
+    return str_token
+
 class Preprocessor: 
     def load_data(self, filepath:str ) -> List: 
         """ 
@@ -119,39 +121,58 @@ class Tokenizer:
         if return_dict: 
             return token2index, index2token
 
- 
-    def tokenize(self, smiles:str, vocab:dict = None) -> List[int]: 
+        
+    def tokenize(self, smiles: str, vocab: dict = None) -> List[int]:
         """
-        Tokenizes a single SMILES string into a list of tokens,
+        Tokenizes a single SMILES string into a list of integer tokens,
         preserving multi-character atoms and stereochemistry tokens.
         
         Args:
-        - smiles(str): A raw SMILES string (e.g., "C@@H")
-        - vocab(dict): Vocabulary that allows tokenization str -> int. Can be 
-        passed as argument or created with `build_vocab(smiles_list)`. Should have format
-        dict[character] = int
+            smiles (str): A raw SMILES string (e.g., "C@@H").
+            vocab (dict): A vocabulary dict (e.g., {"C": 1, "@@": 10, "H": 5}) 
+                        mapping token strings to integer indices. 
+                        If None, `self.token2index` is used.
         
         Returns:
-        - tokens (List[int]): List of tokens representing the SMILES converted to integers using
-        predefined vocabulary
-        e.g., ["C", "@@", "H"] -> [1, 10, 5]
+            List[int]: List of integer tokens corresponding to the SMILES.
         """
-        # Check if vocab is provided; otherwise, use self.vocab
+        # If no vocabulary is provided, fall back to self.token2index
         if vocab is None:
-            if self.index2token is None:
+            if self.token2index is None:
                 raise TypeError(
                     "Vocabulary is required but was not provided. "
                     "Either call `build_vocab(smiles_list)` first or pass a `vocab` argument."
                 )
-            vocab = self.index2token # Use self.vocab if available
+            vocab = self.token2index
 
-        # First we split the smiles into separated chars
-        string_tokens = _string_to_list_chars(smiles)
-        
+        # Find the maximum possible length of tokens in the vocabulary
+        max_token_length = max(len(tok) for tok in vocab.keys())
+
         index_tokens = []
-        for string in string_tokens:
-            index_tokens.append(self.token2index[string])
- 
+        i = 0
+        n = len(smiles)
+
+        # Parse the SMILES from left to right
+        while i < n:
+            match_found = False
+            
+            # Try all possible sizes from max_token_length down to 1
+            for size in range(max_token_length, 0, -1):
+                if i + size <= n:
+                    substring = smiles[i:i+size]
+                    # If this substring is in our vocab, consume it
+                    if substring in vocab:
+                        index_tokens.append(vocab[substring])
+                        i += size
+                        match_found = True
+                        break
+            
+            # If we couldn't match any token at this position, raise an error or handle unknown tokens
+            if not match_found:
+                raise ValueError(
+                    f"No valid token found for substring starting at position {i} in SMILES: '{smiles}'"
+                )
+
         return index_tokens
 
 
